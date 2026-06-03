@@ -1,9 +1,11 @@
 import json, html, os
 PDIR="/sessions/awesome-peaceful-babbage/mnt/kuzmenko/pages"
 OUT="/sessions/awesome-peaceful-babbage/mnt/kuzmenko/index.html"
+LIB=open("/sessions/awesome-peaceful-babbage/mnt/kuzmenko/build/page-flip.min.js",encoding="utf-8").read()
 m=json.load(open(os.path.join(PDIR,"manifest.json")))
 N=m["count"]; AR=m["ar"]
-BASE="https://cdn.jsdelivr.net/gh/amarshalkin/kuzmenko@main/pages/"
+# BASE pinned to a commit after push to avoid stale jsDelivr cache; @main as fallback
+BASE=os.environ.get("GK_BASE","https://cdn.jsdelivr.net/gh/amarshalkin/kuzmenko@main/pages/")
 TITLE="Гастрокод — май 2026"
 DLURL="https://disk.yandex.ru/i/EwZlR56RMYKx-w"
 
@@ -11,7 +13,7 @@ tpl=r'''<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>__TITLE__</title>
 <style>:root{color-scheme:light}*{box-sizing:border-box}html,body{margin:0;height:100%}
 body{background:#e9e9ec;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#1a1a1a;overflow:hidden;-webkit-user-select:none;user-select:none}
-#loader{position:fixed;inset:0;z-index:60;background:#1b1613;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .55s ease}
+#loader{position:fixed;inset:0;z-index:60;background:#1b1613;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .6s ease}
 #loader.hide{opacity:0;pointer-events:none}
 .ldtop{position:absolute;top:24px;left:0;right:0;text-align:center;font-family:Georgia,serif;color:#c2a368;font-size:13px;letter-spacing:.42em;padding-left:.42em}
 .ldmark{font-family:Georgia,serif;color:#f1e9da;font-size:clamp(24px,7vw,34px);letter-spacing:.30em;padding-left:.30em;margin-bottom:30px}
@@ -20,41 +22,25 @@ body{background:#e9e9ec;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
 #count{font-family:Georgia,serif;color:#f1e9da;font-size:46px;line-height:1}
 .ringc .of{color:#9a8f7e;font-size:13px;margin-top:6px;letter-spacing:.04em}
 .ldbarw{width:230px;height:1px;background:#3a322a;margin:30px 0 14px;position:relative}
-#ldbar{position:absolute;left:0;top:0;height:1px;width:0;background:#c2a368}
+#ldbar{position:absolute;left:0;top:0;height:1px;width:0;background:#c2a368;transition:width .2s linear}
 #pct{color:#c2a368;font-size:13px;letter-spacing:.18em;margin-bottom:4px}
 .ldbot{position:absolute;bottom:28px;left:0;right:0;text-align:center;padding:0 22px}
 #cap{color:#cdbfa8;font-size:13px;letter-spacing:.03em}
 #sub{color:#6f665a;font-size:11px;margin-top:5px;letter-spacing:.06em;min-height:13px}
-#enter{margin-top:18px;display:none;border:1px solid #c2a368;color:#f1e9da;background:transparent;border-radius:999px;padding:10px 26px;font-size:13px;letter-spacing:.12em;cursor:pointer;font-family:Georgia,serif}
-#enter:hover{background:#c2a368;color:#1b1613}
-#stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;perspective:2400px;touch-action:none;background:#e9e9ec}
-#book{position:relative}
-.layer{position:absolute;inset:0;background:#fff;overflow:hidden}
-.layer img,.face img{width:100%;height:100%;display:block;pointer-events:none}
-.leaf{position:absolute;inset:0;transform-style:preserve-3d;transform-origin:left center;will-change:transform;z-index:5}
-.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;background:#fff}
-.face.back{transform:rotateY(180deg);background:#efeeec}
-#shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.28),rgba(0,0,0,0) 55%);opacity:0;z-index:6;pointer-events:none}
-#spin{position:absolute;top:50%;left:50%;width:34px;height:34px;margin:-17px;border:3px solid rgba(0,0,0,.15);border-top-color:#b9933f;border-radius:50%;z-index:7;animation:sp 1s linear infinite;display:none}
-@keyframes sp{to{transform:rotate(360deg)}}
-.zone{position:absolute;top:0;bottom:0;width:30%;z-index:20}.zone.l{left:0}.zone.r{right:0}
-.nav{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:66px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:30px;color:rgba(0,0,0,.34);background:rgba(255,255,255,.6);z-index:24;cursor:pointer;transition:opacity .2s}
-.nav:hover{color:rgba(0,0,0,.62);background:rgba(255,255,255,.85)}.nav.l{left:8px}.nav.r{right:8px}.nav.off{opacity:0;pointer-events:none}
+#wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#e9e9ec;touch-action:none}
+#flip{box-shadow:0 14px 40px rgba(0,0,0,.22)}
+#flip .stf__item img,#flip img{display:block;width:100%;height:100%}
+.pg{background:#fff;overflow:hidden}.pg img{width:100%;height:100%;display:block}
 #pagepill{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(27,22,19,.78);color:#f1e9da;font-size:12px;letter-spacing:.06em;padding:6px 14px;border-radius:999px;z-index:25;font-variant-numeric:tabular-nums}
 #dl{position:fixed;bottom:14px;right:14px;z-index:25;display:inline-flex;align-items:center;gap:7px;text-decoration:none;background:rgba(27,22,19,.82);color:#f1e9da;font-size:13px;letter-spacing:.04em;padding:9px 15px;border-radius:999px;border:1px solid rgba(194,169,104,.5)}
 #dl:hover{background:#c2a368;color:#1b1613}#dl svg{width:16px;height:16px;display:block}
-@media(max-width:600px){.nav{width:40px;height:58px;font-size:26px;background:rgba(255,255,255,.42)}.nav.l{left:2px}.nav.r{right:2px}#dl span{display:none}#dl{padding:10px}}
+#hint{position:fixed;bottom:46px;left:50%;transform:translateX(-50%);font-size:11px;color:#8a8a8a;z-index:24;letter-spacing:.03em}
+@media(max-width:600px){#dl span{display:none}#dl{padding:10px}#hint{display:none}}
 </style></head>
 <body>
-<div id="stage">
-  <div id="book">
-    <div class="layer" id="base"><img id="baseImg" alt="Страница журнала"></div>
-    <div id="shade"></div><div id="spin"></div>
-  </div>
-  <div class="zone l" id="zl"></div><div class="zone r" id="zr"></div>
-  <div class="nav l off" id="navL">‹</div><div class="nav r" id="navR">›</div>
-</div>
+<div id="wrap"><div id="flip"></div></div>
 <div id="pagepill">1 / __N__</div>
+<div id="hint">Колесо · стрелки · тяни угол страницы</div>
 <a id="dl" href="__DLURL__" target="_blank" rel="noopener noreferrer" title="Скачать PDF на Яндекс.Диске">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Скачать</span></a>
 
@@ -68,19 +54,21 @@ body{background:#e9e9ec;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
   <div class="ldbarw"><div id="ldbar"></div></div>
   <div id="pct">0%</div>
   <div class="ldbot"><div id="cap">Подготовка журнала…</div><div id="sub">&nbsp;</div></div>
-  <button id="enter">Листать журнал</button>
 </div>
 
+<script>/* === StPageFlip (inlined, page-flip@2.0.7) === */
+__LIB__
+</script>
 <script>(function(){
-var BASE="__BASE__", N=__N__, AR=__AR__, C=540.4, GATE=Math.min(8,N);
+var BASE="__BASE__", N=__N__, AR=__AR__, C=540.4;
+var GATE=Math.min(20,N), DUR=4200, CONC=6;
 function pad(n){n=String(n);return n.length>=3?n:('000'+n).slice(-3);}
 var IMGS=[]; for(var i=1;i<=N;i++) IMGS.push(BASE+'page-'+pad(i)+'.webp');
-var idx=0, animating=false, revealed=false;
 var loader=document.getElementById('loader'),ring=document.getElementById('ring'),ldbar=document.getElementById('ldbar');
-var count=document.getElementById('count'),pct=document.getElementById('pct'),cap=document.getElementById('cap'),sub=document.getElementById('sub'),enter=document.getElementById('enter');
-var stage=document.getElementById('stage'),book=document.getElementById('book'),baseImg=document.getElementById('baseImg'),shade=document.getElementById('shade'),spin=document.getElementById('spin');
-var navL=document.getElementById('navL'),navR=document.getElementById('navR'),pill=document.getElementById('pagepill');
+var count=document.getElementById('count'),pct=document.getElementById('pct'),cap=document.getElementById('cap'),sub=document.getElementById('sub');
+var wrap=document.getElementById('wrap'),flipEl=document.getElementById('flip'),pill=document.getElementById('pagepill');
 var touch=(('ontouchstart' in window)||navigator.maxTouchPoints>0)&&window.innerWidth<900;
+var pf=null, idx=0, pageImgs=[];
 
 function section(p){
   if(p<=4) return 'ОБЛОЖКА';
@@ -91,86 +79,106 @@ function section(p){
   if(p<=100) return 'ПАРТНЁРЫ';
   return 'ЗАВЕРШЕНИЕ';
 }
-// ---- network loading ----
-var cache={}, readyCount=0;
-function ensure(i,cb){
-  if(i<0||i>=N){cb&&cb();return;}
-  if(cache[i]){cb&&cb(cache[i]);return;}
-  var im=new Image();
-  im.onload=function(){cache[i]=im;readyCount++;cb&&cb(im);};
-  im.onerror=function(){cache[i]=im;readyCount++;cb&&cb(im);};
-  im.src=IMGS[i];
-}
-function ensureWindow(){ for(var i=idx-1;i<=idx+3;i++) ensure(i); }
-// ---- loader gate: first GATE pages ----
-var gateDone=0;
-function renderLoader(){
-  var g=Math.min(gateDone,GATE), p=g/GATE;
+// ---- gate preload: first GATE pages (warms cache) ----
+var realLoaded=0, started=0;
+function loadGate(i){ var im=new Image(); im.onload=im.onerror=function(){ realLoaded++; pumpGate(); }; im.src=IMGS[i]; }
+function pumpGate(){ while(started<GATE && (started-realLoaded)<CONC){ loadGate(started++); } }
+// ---- showcase loader: counter sweeps 0..N over DUR, reveal needs GATE ready ----
+var t0=performance.now();
+function ease(x){ return x<0.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2; }
+function renderLoader(disp){
+  var p=disp/N;
   ring.setAttribute('stroke-dashoffset',(C*(1-p)).toFixed(1));
   ldbar.style.width=(p*230).toFixed(1)+'px';
-  count.textContent=readyCount;
-  pct.textContent=Math.round(p*100)+'%';
-  if(g<GATE){ cap.textContent='Загрузка страницы '+(g+1); sub.textContent=section(g+1); }
-  else { cap.textContent='Журнал готов'; sub.textContent='МОЖНО ЛИСТАТЬ'; }
+  count.textContent=disp; pct.textContent=Math.round(p*100)+'%';
+  if(disp<N){ var cur=Math.min(disp+1,N); cap.textContent='Загрузка страницы '+cur; sub.textContent=section(cur); }
+  else { cap.textContent='Журнал готов'; sub.textContent='ОТКРЫВАЕМ…'; }
 }
-function gateTick(){ gateDone++; renderLoader(); if(gateDone>=GATE) onReady(); }
-function onReady(){ renderLoader(); enter.style.display='inline-block'; setTimeout(reveal,550); }
-function reveal(){ if(revealed)return; revealed=true; show(); loader.classList.add('hide'); setTimeout(function(){loader.style.display='none';},600); ensureWindow(); }
-enter.onclick=reveal;
-// ---- viewer ----
-function fit(){
-  var availH=stage.clientHeight-24, availW=stage.clientWidth-(touch?10:120);
-  var h=availH, w=h/AR; if(w>availW){w=availW;h=w*AR;}
-  book.style.width=Math.floor(w)+'px'; book.style.height=Math.floor(h)+'px';
+function loop(now){
+  var e=Math.min((now-t0)/DUR,1);
+  renderLoader(Math.round(ease(e)*N));
+  if(e>=1 && realLoaded>=GATE){ boot(); return; }
+  requestAnimationFrame(loop);
 }
-function show(){
-  pill.textContent=(idx+1)+' / '+N; updNav();
-  if(cache[idx]){ baseImg.src=IMGS[idx]; spin.style.display='none'; }
-  else { spin.style.display='block'; ensure(idx,function(){ if(!animating){baseImg.src=IMGS[idx];} spin.style.display='none'; }); }
+// ---- build pages: first GATE get src now, rest lazy (background) ----
+function buildPages(){
+  flipEl.innerHTML=''; pageImgs=[];
+  for(var i=0;i<N;i++){
+    var pg=document.createElement('div'); pg.className='pg'; pg.setAttribute('data-density','soft');
+    var im=document.createElement('img'); im.alt='Страница '+(i+1); im.draggable=false;
+    if(i<GATE) im.src=IMGS[i]; else im.setAttribute('data-src',IMGS[i]);
+    pg.appendChild(im); flipEl.appendChild(pg); pageImgs.push(im);
+  }
 }
-function updNav(){ navL.classList.toggle('off',idx<=0); navR.classList.toggle('off',idx>=N-1); }
-function flip(dir){
-  if(animating)return; var target=idx+dir; if(target<0||target>=N)return;
-  animating=true;
-  var leaf=document.createElement('div');leaf.className='leaf';
-  var front=document.createElement('div');front.className='face front';
-  var back=document.createElement('div');back.className='face back';
-  var fimg=document.createElement('img'),bimg=document.createElement('img');
-  front.appendChild(fimg);back.appendChild(bimg);leaf.appendChild(front);leaf.appendChild(back);
-  book.insertBefore(leaf,shade);
-  var from,to;
-  if(dir>0){ fimg.src=IMGS[idx]; baseImg.src=(cache[target]?IMGS[target]:IMGS[idx]); from=0; to=-180; }
-  else { fimg.src=(cache[target]?IMGS[target]:IMGS[idx]); from=-180; to=0; }
-  if(!cache[target]){ ensure(target,function(){ baseImg.src=IMGS[target]; }); }
-  leaf.style.transform='rotateY('+from+'deg)';
-  shade.animate([{opacity:0},{opacity:.32},{opacity:0}],{duration:660,easing:'ease-in-out'});
-  leaf.animate([{transform:'rotateY('+from+'deg)'},{transform:'rotateY('+to+'deg)'}],{duration:660,easing:'cubic-bezier(.3,.1,.3,1)'}).onfinish=function(){
-    idx=target; show(); leaf.remove(); animating=false; ensureWindow();
-  };
+function ensureSrc(i){ var im=pageImgs[i]; if(im && !im.getAttribute('src')){ var d=im.getAttribute('data-src'); if(d){ im.src=d; } } }
+// ---- background loader (no UI) ----
+var bgIdx=GATE, bgInflight=0;
+function bgNext(){
+  while(bgInflight<CONC && bgIdx<N){
+    var im=pageImgs[bgIdx++];
+    if(im.getAttribute('src')){ continue; }
+    bgInflight++;
+    (function(im){ im.onload=im.onerror=function(){ bgInflight--; bgNext(); }; im.src=im.getAttribute('data-src'); })(im);
+  }
 }
-navR.onclick=function(){flip(1)};navL.onclick=function(){flip(-1)};
-document.getElementById('zr').onclick=function(){flip(1)};document.getElementById('zl').onclick=function(){flip(-1)};
-document.addEventListener('keydown',function(e){
-  if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown'){flip(1);e.preventDefault()}
-  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){flip(-1);e.preventDefault()}
-});
-var acc=0,lock=false;
-stage.addEventListener('wheel',function(e){
-  e.preventDefault(); if(animating)return; acc+=e.deltaY; if(lock)return;
-  if(acc>60){lock=true;acc=0;flip(1);setTimeout(function(){lock=false},120);}
-  else if(acc<-60){lock=true;acc=0;flip(-1);setTimeout(function(){lock=false},120);}
-},{passive:false});
-var tsx=null,tsy=null;
-stage.addEventListener('touchstart',function(e){var t=e.changedTouches[0];tsx=t.clientX;tsy=t.clientY;},{passive:true});
-stage.addEventListener('touchend',function(e){
-  if(tsx===null)return; var t=e.changedTouches[0]; var dx=t.clientX-tsx,dy=t.clientY-tsy;
-  if(Math.abs(dx)>42 && Math.abs(dx)>Math.abs(dy)){ flip(dx<0?1:-1); } tsx=null;
-},{passive:true});
-var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(fit,200)});
-fit();
-for(var k=0;k<GATE;k++){ (function(k){ ensure(k,function(){ gateTick(); }); })(k); }
-})();</script></body></html>'''
+function dims(){
+  var availH=window.innerHeight-24, availW=window.innerWidth-(touch?16:40);
+  var w=availH/AR; if(w>availW)w=availW; var h=w*AR;
+  return {w:Math.round(w), h:Math.round(h)};
+}
+function makePF(d){
+  buildPages();
+  var p=new St.PageFlip(flipEl,{
+    width:d.w, height:d.h, size:'fixed',
+    minWidth:120, maxWidth:3000, minHeight:160, maxHeight:4200,
+    maxShadowOpacity:0.5, showCover:false, usePortrait:true, autoSize:false,
+    mobileScrollSupport:false, drawShadow:true, flippingTime:800, swipeDistance:28,
+    useMouseEvents:true, clickEventForward:true
+  });
+  p.loadFromHTML(flipEl.querySelectorAll('.pg'));
+  p.on('flip', function(e){ idx=e.data; ensureSrc(idx); ensureSrc(idx+1); ensureSrc(idx-1); pill.textContent=(idx+1)+' / '+N; });
+  return p;
+}
+function boot(){
+  var d=dims();
+  flipEl.style.width=d.w+'px'; flipEl.style.height=d.h+'px';
+  pf=makePF(d);
+  loader.classList.add('hide'); setTimeout(function(){loader.style.display='none';},650);
+  bgNext(); // докачиваем остальное фоном, без лоадера
+  var wlock=false, acc=0;
+  wrap.addEventListener('wheel', function(e){
+    e.preventDefault(); if(wlock) return; acc+=e.deltaY;
+    if(acc>40){ acc=0; wlock=true; ensureSrc(idx+1); pf.flipNext(); setTimeout(function(){wlock=false;},820); }
+    else if(acc<-40){ acc=0; wlock=true; ensureSrc(idx-1); pf.flipPrev(); setTimeout(function(){wlock=false;},820); }
+  }, {passive:false});
+  document.addEventListener('keydown', function(e){
+    if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown'){ ensureSrc(idx+1); pf.flipNext(); e.preventDefault(); }
+    else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp'){ ensureSrc(idx-1); pf.flipPrev(); e.preventDefault(); }
+  });
+  var rt; window.addEventListener('resize', function(){ clearTimeout(rt); rt=setTimeout(relayout, 220); });
+}
+function relayout(){
+  if(!pf) return;
+  var cur=0; try{ cur=pf.getCurrentPageIndex(); }catch(e){}
+  try{ pf.destroy(); }catch(e){}
+  var d=dims(); flipEl.style.width=d.w+'px'; flipEl.style.height=d.h+'px';
+  buildPages();
+  // keep already-loaded ones loaded
+  for(var i=0;i<N;i++){ if(i<GATE || i<=bgIdx){ ensureSrc(i); } }
+  pf=new St.PageFlip(flipEl,{
+    width:d.w, height:d.h, size:'fixed', minWidth:120, maxWidth:3000, minHeight:160, maxHeight:4200,
+    maxShadowOpacity:0.5, showCover:false, usePortrait:true, autoSize:false,
+    mobileScrollSupport:false, drawShadow:true, flippingTime:800, swipeDistance:28, useMouseEvents:true, clickEventForward:true
+  });
+  pf.loadFromHTML(flipEl.querySelectorAll('.pg'));
+  pf.on('flip', function(e){ idx=e.data; ensureSrc(idx); ensureSrc(idx+1); ensureSrc(idx-1); pill.textContent=(idx+1)+' / '+N; });
+  if(cur>0){ setTimeout(function(){ try{ pf.turnToPage(cur); }catch(e){} }, 60); }
+}
+renderLoader(0); pumpGate(); requestAnimationFrame(loop);
+})();</script>
+</body></html>'''
 out=(tpl.replace("__TITLE__",html.escape(TITLE)).replace("__DLURL__",DLURL)
-        .replace("__BASE__",BASE).replace("__N__",str(N)).replace("__AR__",repr(AR)))
+        .replace("__BASE__",BASE).replace("__N__",str(N)).replace("__AR__",repr(AR))
+        .replace("__LIB__",LIB))
 open(OUT,"w",encoding="utf-8").write(out)
-print("index.html",round(os.path.getsize(OUT)/1024,1),"KB  N",N,"AR",AR)
+print("index.html",round(os.path.getsize(OUT)/1024,1),"KB  BASE=",BASE)
