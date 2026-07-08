@@ -6,17 +6,37 @@ m=json.load(open(os.path.join(PDIR,"manifest.json")))
 N=m["count"]; AR=m["ar"]
 # BASE pinned to a commit after push to avoid stale jsDelivr cache; @main as fallback
 BASE=os.environ.get("GK_BASE","https://cdn.jsdelivr.net/gh/amarshalkin/kuzmenko@main/pages/")
-TITLE="Гастрокод — май 2026"
+TITLE="Гастрокод — август 2026"
 DLURL="https://disk.yandex.ru/i/EwZlR56RMYKx-w"
+PAGES_URL="https://amarshalkin.github.io/kuzmenko/"
+OGIMG=PAGES_URL+"og-cover.jpg"
+DESC="Гид по вкусу Кавказа: сервис и управление в лицах. Листайте журнал онлайн — 110 страниц."
 
 tpl=r'''<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>__TITLE__</title>
+<meta name="description" content="__DESC__">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Гастрокод">
+<meta property="og:title" content="__TITLE__">
+<meta property="og:description" content="__DESC__">
+<meta property="og:url" content="__PAGES_URL__">
+<meta property="og:image" content="__OGIMG__">
+<meta property="og:image:secure_url" content="__OGIMG__">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Гастрокод — май 2026">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="__TITLE__">
+<meta name="twitter:description" content="__DESC__">
+<meta name="twitter:image" content="__OGIMG__">
+<link rel="canonical" href="__PAGES_URL__">
 <style>:root{color-scheme:light}*{box-sizing:border-box}html,body{margin:0;height:100%}
 body{background:#e9e9ec;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#1a1a1a;overflow:hidden;-webkit-user-select:none;user-select:none}
 #loader{position:fixed;inset:0;z-index:60;background:#1b1613;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .6s ease}
 #loader.hide{opacity:0;pointer-events:none}
 .ldtop{position:absolute;top:24px;left:0;right:0;text-align:center;font-family:Georgia,serif;color:#c2a368;font-size:13px;letter-spacing:.42em;padding-left:.42em}
-.ldmark{font-family:Georgia,serif;color:#f1e9da;font-size:clamp(24px,7vw,34px);letter-spacing:.30em;padding-left:.30em;margin-bottom:30px}
+.ldmark{font-family:Georgia,serif;color:#f1e9da;font-size:clamp(22px,5.6vw,32px);letter-spacing:.08em;padding-left:.08em;margin-bottom:30px;white-space:nowrap}
 .ring{position:relative;width:188px;height:188px}.ring svg{display:block;transform:rotate(-90deg)}
 .ringc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 #count{font-family:Georgia,serif;color:#f1e9da;font-size:46px;line-height:1}
@@ -45,8 +65,8 @@ body{background:#e9e9ec;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Скачать</span></a>
 
 <div id="loader">
-  <div class="ldtop">МАЙ 2026</div>
-  <div class="ldmark">ГАСТРОКОД</div>
+  <div class="ldtop">АВГУСТ 2026</div>
+  <div class="ldmark">Кавказ в 1 клик</div>
   <div class="ring"><svg viewBox="0 0 188 188" width="188" height="188">
     <circle cx="94" cy="94" r="86" fill="none" stroke="#3a322a" stroke-width="3"></circle>
     <circle id="ring" cx="94" cy="94" r="86" fill="none" stroke="#c2a368" stroke-width="3" stroke-linecap="round" stroke-dasharray="540.4" stroke-dashoffset="540.4"></circle>
@@ -83,9 +103,7 @@ function section(p){
 var realLoaded=0, started=0;
 function loadGate(i){ var im=new Image(); im.onload=im.onerror=function(){ realLoaded++; pumpGate(); }; im.src=IMGS[i]; }
 function pumpGate(){ while(started<GATE && (started-realLoaded)<CONC){ loadGate(started++); } }
-// ---- showcase loader: counter sweeps 0..N over DUR, reveal needs GATE ready ----
-var t0=performance.now();
-function ease(x){ return x<0.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2; }
+// ---- loader synced to REAL load of first GATE pages; counter "pretends" 0..N ----
 function renderLoader(disp){
   var p=disp/N;
   ring.setAttribute('stroke-dashoffset',(C*(1-p)).toFixed(1));
@@ -94,10 +112,14 @@ function renderLoader(disp){
   if(disp<N){ var cur=Math.min(disp+1,N); cap.textContent='Загрузка страницы '+cur; sub.textContent=section(cur); }
   else { cap.textContent='Журнал готов'; sub.textContent='ОТКРЫВАЕМ…'; }
 }
-function loop(now){
-  var e=Math.min((now-t0)/DUR,1);
-  renderLoader(Math.round(ease(e)*N));
-  if(e>=1 && realLoaded>=GATE){ boot(); return; }
+var disp=0, booted=false;
+function loop(){
+  var target=(realLoaded/GATE)*N;          // 110 достигается ровно когда загружены первые GATE
+  if(target>N) target=N;
+  disp += (target-disp)*0.18;              // плавно догоняем реальный прогресс
+  if(target-disp<0.4) disp=target;
+  renderLoader(Math.round(disp));
+  if(realLoaded>=GATE && disp>=N-0.4){ renderLoader(N); if(!booted){booted=true; setTimeout(boot,260);} return; }
   requestAnimationFrame(loop);
 }
 // ---- build pages: first GATE get src now, rest lazy (background) ----
@@ -179,6 +201,7 @@ renderLoader(0); pumpGate(); requestAnimationFrame(loop);
 </body></html>'''
 out=(tpl.replace("__TITLE__",html.escape(TITLE)).replace("__DLURL__",DLURL)
         .replace("__BASE__",BASE).replace("__N__",str(N)).replace("__AR__",repr(AR))
+        .replace("__DESC__",html.escape(DESC)).replace("__PAGES_URL__",PAGES_URL).replace("__OGIMG__",OGIMG)
         .replace("__LIB__",LIB))
 open(OUT,"w",encoding="utf-8").write(out)
 print("index.html",round(os.path.getsize(OUT)/1024,1),"KB  BASE=",BASE)
