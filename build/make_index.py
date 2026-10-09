@@ -66,7 +66,7 @@ body{background:#e9e9ec;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
 
 <div id="loader">
   <div class="ldtop">АВГУСТ 2026</div>
-  <div class="ldmark">Кавказ в 1 клик</div>
+  <div class="ldmark">ГастроКОД РФ</div>
   <div class="ring"><svg viewBox="0 0 188 188" width="188" height="188">
     <circle cx="94" cy="94" r="86" fill="none" stroke="#3a322a" stroke-width="3"></circle>
     <circle id="ring" cx="94" cy="94" r="86" fill="none" stroke="#c2a368" stroke-width="3" stroke-linecap="round" stroke-dasharray="540.4" stroke-dashoffset="540.4"></circle>
